@@ -1,0 +1,44 @@
+interceptors:
+  block_ops:
+    enabled: true
+    priority: 100
+    condition:
+      type: "any"
+      rules:
+        - type: "regex"
+          pattern: "^/give .* diamond$"
+    actions:
+      - type: "log"
+        format: "黑名单命令拦截: {player} -> {command}"
+      - type: "script"
+        script: |-
+          tell 你使用了黑名单命令
+          cancel_cmd_event
+  has_perm_check:
+    enabled: true
+    priority: 50
+    condition:
+      type: "all"
+      rules:
+        - type: "regex"
+          pattern: "/home"
+        - type: "has_permission"
+          permission: "myhome.use"
+    actions:
+      - type: "script"
+        script: |-
+          tell 你拥有myhome.use权限
+  no_perm_check:
+    enabled: true
+    priority: 50
+    condition:
+      type: "all"
+      rules:
+        - type: "regex"
+          pattern: "/home"
+        - type: "no_permission"
+          permission: "myhome.use"
+    actions:
+      - type: "script"
+        script: |-
+          tell 你没有myhome.use权限
