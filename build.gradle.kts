@@ -1,11 +1,10 @@
-
 import io.izzel.taboolib.gradle.*
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 
 plugins {
     java
-    id("io.izzel.taboolib") version "2.0.22"
+    id("io.izzel.taboolib") version "2.0.27"
     id("org.jetbrains.kotlin.jvm") version "1.8.22"
 }
 
@@ -27,7 +26,7 @@ taboolib {
             name("kzheart")
         }
     }
-    version { taboolib = "6.2.2" }
+    version { taboolib = "6.2.4-1645904" }
 }
 
 repositories {
