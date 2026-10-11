@@ -1,57 +1,79 @@
-import io.izzel.taboolib.gradle.*
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
+import java.util.zip.ZipFile
 
 plugins {
-    java
-    id("io.izzel.taboolib") version "2.0.27"
-    id("org.jetbrains.kotlin.jvm") version "1.8.22"
+    id("me.kzheart.klib") version "0.7.0"
 }
 
-taboolib {
-    env {
-        install(Basic)
-        install(Bukkit)
-        install(BukkitUtil)
-        install(MinecraftChat)
-        install(CommandHelper)
-        install(I18n)
-        install(Kether)
-        install(JavaScript)
-        install(Jexl)
-    }
-    description {
-        name = "Commandant"
-        contributors {
-            name("kzheart")
-        }
-    }
-    version { taboolib = "6.2.4-1645904" }
+klib {
+    libraryVersion.set("0.18.0")
+    name("Commandant")
+    main("me.kzheart.commandant.Commandant")
+    version(project.version.toString())
+    targetPackage("me.kzheart.commandant")
+    noApiVersion()
+    ketherInterop(true)
+    softdepend("PlaceholderAPI")
+    modules { command(); script() }
+    relocate("org.apache.commons.jexl3", "jexl3")
+    relocate("org.apache.commons.logging", "commonslogging")
 }
 
-repositories {
-    mavenCentral()
-}
+val javascriptRuntime = configurations.create("javascriptRuntime")
 
 dependencies {
-    compileOnly("ink.ptms.core:v12004:12004:mapped")
-    compileOnly("ink.ptms.core:v12004:12004:universal")
-    compileOnly(kotlin("stdlib"))
-    compileOnly(fileTree("libs"))
+    add(javascriptRuntime.name, "org.openjdk.nashorn:nashorn-core:15.6")
+    compileOnly("org.spigotmc:spigot-api:1.12.2-R0.1-20180712.012057-156") { isTransitive = false }
+    testImplementation("org.spigotmc:spigot-api:1.12.2-R0.1-20180712.012057-156") { isTransitive = false }
+    testImplementation("com.google.guava:guava:21.0")
+    testImplementation(platform("org.junit:junit-bom:5.14.1"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
-tasks.withType<JavaCompile> {
+java { toolchain.languageVersion.set(JavaLanguageVersion.of(21)); withSourcesJar() }
+tasks.withType<JavaCompile>().configureEach {
+    options.release.set(8)
     options.encoding = "UTF-8"
+    options.compilerArgs.add("-Xlint:-options")
+}
+tasks.test {
+    useJUnitPlatform()
+    javaLauncher.set(javaToolchains.launcherFor {
+        languageVersion.set(JavaLanguageVersion.of(providers.gradleProperty("testJava").getOrElse("21")))
+    })
+}
+tasks.build { dependsOn(tasks.named("shadowJar")) }
+
+// Keep the Java 11+ engine nested: the plugin and Klib stay Java 8 compatible.
+tasks.processResources {
+    from(javascriptRuntime) { into("META-INF/commandant-js") }
 }
 
-tasks.withType<KotlinCompile> {
-    kotlinOptions {
-        jvmTarget = "1.8"
-        freeCompilerArgs = listOf("-Xjvm-default=all")
+tasks.register("verifyPluginJar") {
+    dependsOn(tasks.named("shadowJar"))
+    doLast {
+        val jar = layout.buildDirectory.file("libs/${project.name}-${project.version}-all.jar").get().asFile
+        ZipFile(jar).use { archive ->
+            val entries = archive.entries().asSequence().toList()
+            check(archive.getEntry("plugin.yml") != null) { "Missing plugin.yml" }
+            check(entries.none { it.name.startsWith("taboolib/") || it.name.startsWith("kotlin/") }) {
+                "Unexpected TabooLib/Kotlin runtime"
+            }
+            check(entries.none { it.name.startsWith("me/kzheart/klib/") }) { "Unrelocated Klib classes" }
+            entries.filter { it.name.endsWith(".class") && !it.name.startsWith("META-INF/versions/") }
+                .forEach { entry ->
+                    archive.getInputStream(entry).use { input ->
+                        val header = ByteArray(8)
+                        check(input.read(header) == 8) { "Truncated class ${entry.name}" }
+                        val major = ((header[6].toInt() and 255) shl 8) or (header[7].toInt() and 255)
+                        check(major <= 52) { "${entry.name} requires Java class version $major" }
+                    }
+                }
+        }
     }
 }
+tasks.check { dependsOn("verifyPluginJar") }
 
-configure<JavaPluginConvention> {
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
+tasks.named("sourcesJar") {
+    dependsOn("generateRemoteAccess", "generatePluginYaml", "generateGuardDataDirectory", "generateGuardEntrypoint", "generateGuardKetherInterop")
 }
