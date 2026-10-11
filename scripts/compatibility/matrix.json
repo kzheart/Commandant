@@ -1,0 +1,10 @@
+[
+  {"version": "1.12", "build": 1169, "java": 8},
+  {"version": "1.12.2", "build": 1620, "java": 8},
+  {"version": "1.16.5", "build": 794, "java": 16},
+  {"version": "1.19.4", "build": 550, "java": 17},
+  {"version": "1.20.6", "build": 151, "java": 21},
+  {"version": "1.21.11", "build": 132, "java": 21},
+  {"version": "26.1.2", "build": 74, "java": 25},
+  {"version": "26.2", "build": 133, "java": 25}
+]

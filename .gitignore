@@ -44,3 +44,16 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+# Isolated server test artifacts (never commit server JARs or worlds)
+/scripts/compatibility/java*/
+/scripts/compatibility/server-*/
+/scripts/compatibility/*.jar
+/scripts/compatibility/*.tar.gz
+/scripts/compatibility/*-metadata.json
+/scripts/compatibility/*-builds.json
+/scripts/compatibility/*-results.json
+/scripts/compatibility/artifact-manifest.json
+/scripts/compatibility/harness/classes/
+
+__pycache__/
+/scripts/compatibility/fixture/classes/
